@@ -41,8 +41,36 @@ def set_response_encoding(response):
         response.headers['Content-Type'] = 'text/html; charset=utf-8'
     return response
 
+# 检查是否禁用SocketIO（用于Vercel等无服务器环境）
+disable_socketio = os.environ.get('DISABLE_SOCKETIO', 'false').lower() == 'true'
+
 # 初始化SocketIO，用于实时通信
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = None
+if not disable_socketio:
+    from flask_socketio import SocketIO, emit
+    socketio = SocketIO(app, cors_allowed_origins="*")
+else:
+    logger.info("SocketIO已禁用，运行在纯HTTP模式下")
+
+# 创建一个模拟的socketio对象，用于在禁用SocketIO时避免错误
+class MockSocketIO:
+    """模拟SocketIO对象，在禁用SocketIO时使用"""
+    @staticmethod
+    def emit(*args, **kwargs):
+        pass
+    
+    @staticmethod
+    def on(*args, **kwargs):
+        pass
+    
+    @staticmethod
+    def run(*args, **kwargs):
+        # 使用标准的Flask应用运行
+        app.run(*args, **kwargs)
+
+# 如果禁用了SocketIO，使用模拟对象
+if disable_socketio:
+    socketio = MockSocketIO()
 
 # 配置日志
 logging.basicConfig(

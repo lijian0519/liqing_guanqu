@@ -1,0 +1,25 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "wsgi.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "wsgi.py"
+    }
+  ],
+  "env": {
+    "PORT": "80",
+    "CONFIG_NAME": "production",
+    "DEBUG": "false",
+    "DISABLE_SOCKETIO": "true"
+  },
+  "regions": ["all"],
+  "framework": null,
+  "installCommand": "pip install -r requirements.txt",
+  "buildCommand": "echo 'Building for Vercel deployment'"
+}
