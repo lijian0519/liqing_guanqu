@@ -31,6 +31,17 @@ import paho.mqtt.client as mqtt
 app = Flask(__name__)
 app.config.from_object(current_config)
 
+# 配置日志
+logging.basicConfig(
+    level=getattr(logging, current_config.LOG_LEVEL),
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(current_config.LOG_FILE, encoding='utf-8'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger('MQTTWebInterface')
+
 # 添加响应拦截器，确保所有响应都设置正确的编码
 @app.after_request
 def set_response_encoding(response):
@@ -40,17 +51,6 @@ def set_response_encoding(response):
     elif 'Content-Type' not in response.headers:
         response.headers['Content-Type'] = 'text/html; charset=utf-8'
     return response
-
-# 检查是否禁用SocketIO（用于Vercel等无服务器环境）
-disable_socketio = os.environ.get('DISABLE_SOCKETIO', 'false').lower() == 'true'
-
-# 初始化SocketIO，用于实时通信
-socketio = None
-if not disable_socketio:
-    from flask_socketio import SocketIO, emit
-    socketio = SocketIO(app, cors_allowed_origins="*")
-else:
-    logger.info("SocketIO已禁用，运行在纯HTTP模式下")
 
 # 创建一个模拟的socketio对象，用于在禁用SocketIO时避免错误
 class MockSocketIO:
@@ -68,20 +68,17 @@ class MockSocketIO:
         # 使用标准的Flask应用运行
         app.run(*args, **kwargs)
 
-# 如果禁用了SocketIO，使用模拟对象
-if disable_socketio:
-    socketio = MockSocketIO()
+# 检查是否禁用SocketIO（用于Vercel等无服务器环境）
+disable_socketio = os.environ.get('DISABLE_SOCKETIO', 'false').lower() == 'true'
 
-# 配置日志
-logging.basicConfig(
-    level=getattr(logging, current_config.LOG_LEVEL),
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler(current_config.LOG_FILE, encoding='utf-8'),
-        logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger('MQTTWebInterface')
+# 初始化SocketIO，用于实时通信
+socketio = None
+if not disable_socketio:
+    from flask_socketio import SocketIO, emit
+    socketio = SocketIO(app, cors_allowed_origins="*")
+else:
+    logger.info("SocketIO已禁用，运行在纯HTTP模式下")
+    socketio = MockSocketIO()
 
 # 初始化全局变量
 mqtt_client_instance = None

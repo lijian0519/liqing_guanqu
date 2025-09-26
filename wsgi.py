@@ -25,8 +25,8 @@ if 'VERCEL' in os.environ:
 from app import app
 
 # 禁用SocketIO功能以适应Vercel的无服务器环境
-# 在导入app之后，但在应用运行之前进行设置
-app.config['DISABLE_SOCKETIO'] = True
+# 这里应该设置环境变量，而不是app.config
+os.environ['DISABLE_SOCKETIO'] = 'true'
 
 # 添加一个简单的健康检查端点
 @app.route('/api/health')
