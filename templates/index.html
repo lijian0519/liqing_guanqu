@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MQTT Web界面监控系统</title>
+    <!-- 引入Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- 引入Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- 引入Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+    <!-- 引入自定义CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container-fluid">
+        <!-- 顶部导航栏 -->
+        <nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="#">
+                    <i class="fa fa-tint" aria-hidden="true"></i> 沥青罐监控系统
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav ms-auto">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="#dashboard">
+                                <i class="fa fa-dashboard" aria-hidden="true"></i> 仪表盘
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#charts">
+                                <i class="fa fa-line-chart" aria-hidden="true"></i> 图表分析
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#settings">
+                                <i class="fa fa-cog" aria-hidden="true"></i> 设置
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#about">
+                                <i class="fa fa-info-circle" aria-hidden="true"></i> 关于
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+
+        <!-- 状态栏 -->
+        <div class="status-bar bg-light border-bottom py-2 px-4">
+            <div class="row">
+                <div class="col-md-4">
+                    <span id="mqtt-status" class="badge bg-danger">
+                        <i class="fa fa-exclamation-circle" aria-hidden="true"></i> MQTT 未连接
+                    </span>
+                </div>
+                <div class="col-md-4 text-center">
+                    <span id="current-time">--:--:--</span>
+                </div>
+                <div class="col-md-4 text-end">
+                    <span id="update-time">最后更新: --:--:--</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主内容区域 -->
+        <main class="py-4">
+            <!-- 仪表盘区域 -->
+            <section id="dashboard" class="mb-6">
+                <h2 class="text-center mb-4">
+                    <i class="fa fa-tachometer" aria-hidden="true"></i> 实时监控数据
+                </h2>
+                
+                <!-- 数据概览卡片 -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card bg-info text-white">
+                            <div class="card-body">
+                                <h5 class="card-title"><i class="fa fa-thermometer-half" aria-hidden="true"></i> 平均温度</h5>
+                                <p class="card-text display-4" id="avg-temperature">0.0 °C</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-primary text-white">
+                            <div class="card-body">
+                                <h5 class="card-title"><i class="fa fa-tint" aria-hidden="true"></i> 平均液位</h5>
+                                <p class="card-text display-4" id="avg-level">0.0 m</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-success text-white">
+                            <div class="card-body">
+                                <h5 class="card-title"><i class="fa fa-balance-scale" aria-hidden="true"></i> 总吨位</h5>
+                                <p class="card-text display-4" id="total-weight">0.0 t</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-warning text-dark">
+                            <div class="card-body">
+                                <h5 class="card-title"><i class="fa fa-exclamation-triangle" aria-hidden="true"></i> 警报数量</h5>
+                                <p class="card-text display-4" id="alarm-count">0</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 沥青罐显示网格 -->
+                <div class="tank-grid">
+                    {% for tank_id, tank in tanks.items() %}
+                    <div class="tank-card card" data-tank-id="{{ tank_id }}">
+                        <div class="card-header bg-primary text-white">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <h5 class="card-title mb-0">{{ tank.name }}</h5>
+                                </div>
+                                <div class="col-md-4 text-end">
+                                    <span class="tank-status badge bg-success" id="status-{{ tank_id }}">
+                                        正常
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <!-- 罐图形显示 -->
+                            <div class="tank-visualization mb-3">
+                                <div class="tank-container">
+                                    <div class="tank-outline">
+                                        <div class="tank-level" id="level-{{ tank_id }}" style="height: 0%">
+                                        </div>
+                                        <div class="high-limit-line" style="bottom: {{ (tank.high_limit / tank.height) * 100 }}%">
+                                            <span class="high-limit-label">高限</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 罐数据显示 -->
+                            <div class="tank-data">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="data-item">
+                                            <span class="data-label">温度:</span>
+                                            <span class="data-value temperature" id="temp-{{ tank_id }}">{{ tank.temperature }} °C</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="data-item">
+                                            <span class="data-label">液位:</span>
+                                            <span class="data-value level" id="level-value-{{ tank_id }}">{{ tank.level }} m</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="data-item">
+                                            <span class="data-label">吨位:</span>
+                                            <span class="data-value weight" id="weight-{{ tank_id }}">{{ tank.weight }} t</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="data-item">
+                                            <span class="data-label">高限:</span>
+                                            <span class="data-value high-limit">{{ tank.high_limit }} m</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 误差调整 -->
+                            <div class="error-adjustment mt-3">
+                                <div class="input-group">
+                                    <span class="input-group-text">液位误差:</span>
+                                    <input type="number" class="form-control error-input" id="error-{{ tank_id }}" value="{{ '%.3f'|format(tank.error) }}" step="0.001" data-tank-height="{{ tank.height }}">
+                                    <span class="input-group-text">m</span>
+                                    <button class="btn btn-primary update-error-btn" data-tank-id="{{ tank_id }}">
+                                        <i class="fa fa-save" aria-hidden="true"></i> 更新
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <!-- 图表分析区域 -->
+            <section id="charts" class="mb-6">
+                <h2 class="text-center mb-4">
+                    <i class="fa fa-line-chart" aria-hidden="true"></i> 数据趋势分析
+                </h2>
+                
+                <!-- 历史数据查询区域 -->
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="card-title mb-0">历史数据查询</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3 mb-3">
+                                <label for="history-tank-select" class="form-label">选择罐</label>
+                                <select class="form-control" id="history-tank-select">
+                                    <option value="all">所有罐</option>
+                                    {% for tank_id, tank in tanks.items() %}
+                                    <option value="{{ tank_id }}">{{ tank.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label for="history-start-date" class="form-label">开始日期</label>
+                                <input type="date" class="form-control" id="history-start-date">
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label for="history-end-date" class="form-label">结束日期</label>
+                                <input type="date" class="form-control" id="history-end-date">
+                            </div>
+                            <div class="col-md-3 mb-3" style="display: flex; align-items: flex-end;">
+                                <button class="btn btn-primary w-100" id="query-history-btn">
+                                    <i class="fa fa-search" aria-hidden="true"></i> 查询历史数据
+                                </button>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="show-real-time">
+                                    <label class="form-check-label" for="show-real-time">
+                                        显示实时数据（取消勾选则只显示历史数据）
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 图表容器 -->
+                <div class="row">
+                    <div class="col-md-6 mb-4">
+                        <div class="card">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="card-title mb-0">温度趋势</h5>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="temperature-chart" height="250"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-4">
+                        <div class="card">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="card-title mb-0">液位趋势</h5>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="level-chart" height="250"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 系统设置区域 -->
+            <section id="settings" class="mb-6">
+                <h2 class="text-center mb-4">
+                    <i class="fa fa-cog" aria-hidden="true"></i> 系统设置
+                </h2>
+                
+                <!-- 数据存储设置 -->
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="card-title mb-0">数据存储设置</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="storage-days" class="form-label">数据存储天数</label>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" id="storage-days" min="1" max="365" value="7">
+                                        <span class="input-group-text">天</span>
+                                    </div>
+                                    <small class="form-text text-muted">设置历史数据的存储时间，超过该时间的数据将被自动删除</small>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="history-points" class="form-label">每个罐的历史数据点数量</label>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" id="history-points" min="100" max="100000" value="10000">
+                                        <span class="input-group-text">点</span>
+                                    </div>
+                                    <small class="form-text text-muted">设置每个罐保存的历史数据点最大数量，用于控制内存占用</small>
+                                </div>
+                                <button class="btn btn-primary" id="save-storage-settings-btn">
+                                    <i class="fa fa-save" aria-hidden="true"></i> 保存设置
+                                </button>
+                                <div id="storage-settings-status" class="mt-2"></div>
+                            </div>
+                            <div class="col-md-6">
+                                <h5 class="card-title mb-3">数据存储信息</h5>
+                                <ul class="list-group">
+                                    <li class="list-group-item">
+                                        <strong>当前存储天数:</strong> <span id="current-storage-days">7</span> 天
+                                    </li>
+                                    <li class="list-group-item">
+                                        <strong>当前历史数据点数量:</strong> <span id="current-history-points">10000</span> 点
+                                    </li>
+                                    <li class="list-group-item">
+                                        <strong>数据更新频率:</strong> 约每分钟一次
+                                    </li>
+                                    <li class="list-group-item">
+                                        <strong>自动清理:</strong> 系统每天自动清理过期数据
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- MQTT设置 -->
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="card-title mb-0">MQTT设置</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5 class="card-title mb-3">连接信息</h5>
+                                <div class="mb-3">
+                                    <label for="mqtt-broker" class="form-label">MQTT服务器</label>
+                                    <input type="text" class="form-control" id="mqtt-broker" value="{{ config.MQTT_BROKER_URL }}">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="mqtt-port" class="form-label">端口</label>
+                                    <input type="number" class="form-control" id="mqtt-port" value="{{ config.MQTT_BROKER_PORT }}">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="mqtt-client-id" class="form-label">客户端ID</label>
+                                    <input type="text" class="form-control" id="mqtt-client-id" value="{{ config.MQTT_CLIENT_ID }}" readonly>
+                                </div>
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="use-tls" {% if config.MQTT_TLS_ENABLED %}checked{% endif %}>
+                                        <label class="form-check-label" for="use-tls">
+                                            使用TLS加密
+                                        </label>
+                                    </div>
+                                </div>
+                                <button class="btn btn-primary" id="connect-mqtt-btn">
+                                    <i class="fa fa-plug" aria-hidden="true"></i> 连接MQTT
+                                </button>
+                            </div>
+                            <div class="col-md-6">
+                                <h5 class="card-title mb-3">订阅/发布</h5>
+                                <div class="mb-3">
+                                    <label for="subscribe-topic" class="form-label">订阅主题</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="subscribe-topic" placeholder="输入要订阅的主题" value="tanks/data">
+                                        <button class="btn btn-primary" id="subscribe-btn">
+                                            <i class="fa fa-plus-circle" aria-hidden="true"></i> 订阅
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="publish-topic" class="form-label">发布主题</label>
+                                    <input type="text" class="form-control" id="publish-topic" placeholder="输入要发布的主题" value="tanks/adjustments">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="publish-message" class="form-label">发布消息</label>
+                                    <textarea class="form-control" id="publish-message" rows="3" placeholder="输入要发布的消息">{
+  "adjustments": [
+    {"adjustmentFactor": 0.1},
+    {"adjustmentFactor": 0.2},
+    {"adjustmentFactor": 0.3},
+    {"adjustmentFactor": 0.4},
+    {"adjustmentFactor": 0.5},
+    {"adjustmentFactor": 0.6},
+    {"adjustmentFactor": 0.7},
+    {"adjustmentFactor": 0.8},
+    {"adjustmentFactor": 0.9},
+    {"adjustmentFactor": 1.0},
+    {"adjustmentFactor": 1.1}
+  ]
+}</textarea>
+                                </div>
+                                <button class="btn btn-primary" id="publish-btn">
+                                    <i class="fa fa-paper-plane" aria-hidden="true"></i> 发布
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 关于区域 -->
+            <section id="about" class="mb-6">
+                <h2 class="text-center mb-4">
+                    <i class="fa fa-info-circle" aria-hidden="true"></i> 关于系统
+                </h2>
+                
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">MQTT Web界面监控系统</h5>
+                        <p class="card-text">
+                            这是一个基于Web的MQTT监控系统，用于实时监控沥青罐的温度、液位和吨位数据。系统采用Flask框架开发后端，
+                            使用Chart.js进行数据可视化，支持实时数据更新和历史数据趋势分析。
+                        </p>
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item">
+                                <strong>版本:</strong> 1.0.0
+                            </li>
+                            <li class="list-group-item">
+                                <strong>技术栈:</strong> Python Flask, JavaScript, Chart.js, MQTT
+                            </li>
+                            <li class="list-group-item">
+                                <strong>功能特性:</strong>
+                                <ul>
+                                    <li>实时监控多个沥青罐数据</li>
+                                    <li>数据趋势图表分析</li>
+                                    <li>液位误差调整</li>
+                                    <li>MQTT消息发布与订阅</li>
+                                    <li>响应式设计，支持移动端访问</li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- 底部页脚 -->
+        <footer class="bg-dark text-white py-4">
+            <div class="container">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p class="mb-0">© 2023 MQTT Web界面监控系统</p>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <p class="mb-0">
+                            <i class="fa fa-code" aria-hidden="true"></i> 基于Flask和MQTT开发
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- 警报模态框 -->
+    <div class="modal fade" id="alarm-modal" tabindex="-1" aria-labelledby="alarm-modal-label" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content bg-danger text-white">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="alarm-modal-label">
+                        <i class="fa fa-exclamation-triangle" aria-hidden="true"></i> 警报
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="alarm-message">液位超过高限！</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 引入jQuery -->
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <!-- 引入Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- 引入Socket.IO客户端 -->
+    <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.4.0/dist/socket.io.min.js"></script>
+    <!-- 引入自定义JS -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

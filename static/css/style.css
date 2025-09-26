@@ -1,0 +1,208 @@
+/* 全局样式 */
+body {
+    font-family: 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
+    background-color: #f5f5f5;
+    color: #333;
+}
+
+/* 状态栏样式 */
+.status-bar {
+    font-size: 14px;
+}
+
+/* 仪表盘样式 */
+.tank-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 20px;
+}
+
+@media (max-width: 768px) {
+    .tank-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* 罐卡片样式 */
+.tank-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    height: 100%;
+}
+
+.tank-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* 罐可视化样式 */
+.tank-visualization {
+    height: 200px;
+}
+
+.tank-container {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tank-outline {
+    width: 100px;
+    height: 180px;
+    border: 3px solid #333;
+    border-radius: 5px;
+    position: relative;
+    overflow: hidden;
+    background-color: #f8f9fa;
+}
+
+.tank-level {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(180deg, #007bff 0%, #0056b3 100%);
+    transition: height 0.5s ease;
+}
+
+.high-limit-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background-color: red;
+    z-index: 10;
+}
+
+.high-limit-label {
+    position: absolute;
+    right: -40px;
+    top: -8px;
+    font-size: 12px;
+    color: red;
+    white-space: nowrap;
+}
+
+/* 罐数据样式 */
+.tank-data {
+    margin-top: 10px;
+}
+
+.data-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+    padding: 5px 0;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.data-label {
+    font-weight: bold;
+    color: #495057;
+}
+
+.data-value {
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+}
+
+.temperature {
+    color: #dc3545;
+}
+
+.level {
+    color: #007bff;
+}
+
+.weight {
+    color: #28a745;
+}
+
+.high-limit {
+    color: #6c757d;
+}
+
+/* 误差调整样式 */
+.error-adjustment {
+    margin-top: 15px;
+}
+
+/* 警报样式 */
+.tank-status.alarm {
+    background-color: #dc3545 !important;
+}
+
+/* 响应式调整 */
+@media (max-width: 576px) {
+    .data-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .data-value {
+        margin-top: 2px;
+    }
+}
+
+/* 加载动画 */
+.loading {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(0, 123, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: #007bff;
+    animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* 图表容器样式 */
+canvas {
+    max-width: 100% !important;
+}
+
+/* 设置区域样式 */
+#settings .card-body {
+    padding: 2rem;
+}
+
+/* 关于区域样式 */
+#about ul {
+    margin-top: 10px;
+}
+
+/* 动画效果 */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+/* 平滑滚动 */
+html {
+    scroll-behavior: smooth;
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
