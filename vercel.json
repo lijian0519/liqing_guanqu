@@ -16,7 +16,8 @@
     "PORT": "80",
     "CONFIG_NAME": "production",
     "DEBUG": "false",
-    "DISABLE_SOCKETIO": "true"
+    "DISABLE_SOCKETIO": "true",
+    "MAX_TANKS": "11"
   },
   "regions": ["iad1"],
   "framework": null,
