@@ -12,6 +12,14 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
     <!-- 引入自定义CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
+    <!-- 应用配置 -->
+    <script>
+        // 服务器注入的配置变量
+        window.appConfig = {
+            disableSocketIO: {{ 'true' if os.environ.get('DISABLE_SOCKETIO') == 'true' else 'false' }}
+        };
+    </script>
 </head>
 <body>
     <div class="container-fluid">

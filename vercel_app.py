@@ -236,7 +236,7 @@ def index():
             }
         
         # 渲染完整的index.html模板，并传递必要的变量
-        return render_template('index.html', tanks=tanks)
+        return render_template('index.html', tanks=tanks, os=os)
     except Exception as e:
         logger.error(f"加载主页时出错: {str(e)}")
         return str(e), 500

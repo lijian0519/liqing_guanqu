@@ -19,8 +19,18 @@ $(document).ready(function() {
     // 初始化警报模态框
     alarmModal = new bootstrap.Modal(document.getElementById('alarm-modal'));
     
-    // 初始化Socket.IO连接
-    initSocket();
+    // 仅在未禁用Socket.IO时初始化连接
+    if (!window.appConfig || !window.appConfig.disableSocketIO) {
+        initSocket();
+    } else {
+        console.log('Socket.IO已禁用');
+        // 模拟Socket.IO连接断开的状态
+        updateMQTTStatus(false, 'Socket.IO已禁用');
+        // 设置定时刷新数据
+        setInterval(fetchDataPeriodically, 30000); // 每30秒刷新一次数据
+        // 立即获取一次数据
+        fetchDataPeriodically();
+    }
     
     // 初始化图表
     initCharts();
@@ -121,6 +131,24 @@ function initSocket() {
     // 发布状态事件
     socket.on('publish_status', function(data) {
         showNotification(data.message, data.success ? 'success' : 'error');
+    });
+}
+
+// 定期从API获取数据（当Socket.IO被禁用时使用）
+function fetchDataPeriodically() {
+    $.ajax({
+        url: '/api/tanks/data',
+        type: 'GET',
+        dataType: 'json',
+        success: function(response) {
+            if (response.success && response.data) {
+                updateTankData(response.data);
+                updateLastUpdateTime();
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('获取数据失败:', error);
+        }
     });
 }
 
