@@ -18,11 +18,18 @@ os.environ['DISABLE_SOCKETIO'] = 'true'
 os.environ['MAX_TANKS'] = '11'
 os.environ['PORT'] = '80'
 
-# 导入Flask
-from flask import Flask, jsonify, request
+# 获取当前文件目录
+current_dir = os.path.dirname(os.path.abspath(__file__))
 
-# 初始化Flask应用
-app = Flask(__name__)
+# 导入Flask
+from flask import Flask, jsonify, request, render_template
+
+# 初始化Flask应用，并设置模板和静态文件路径
+app = Flask(
+    __name__, 
+    template_folder=os.path.join(current_dir, 'templates'),
+    static_folder=os.path.join(current_dir, 'static')
+)
 
 # 配置日志
 logging.basicConfig(
@@ -212,72 +219,24 @@ def get_tank_history(tank_id):
 @app.route('/index')
 def index():
     try:
-        # 返回简单的HTML页面，指向静态资源
-        return '''
-        <!DOCTYPE html>
-        <html lang="zh-CN">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>沥青罐监控系统 - Vercel版本</title>
-            <style>
-                body {
-                    font-family: Arial, sans-serif;
-                    max-width: 800px;
-                    margin: 0 auto;
-                    padding: 20px;
-                    text-align: center;
-                }
-                h1 {
-                    color: #333;
-                }
-                p {
-                    color: #666;
-                    margin-bottom: 20px;
-                }
-                .api-info {
-                    background-color: #f5f5f5;
-                    padding: 15px;
-                    border-radius: 5px;
-                    text-align: left;
-                }
-                .api-info h3 {
-                    margin-top: 0;
-                }
-                .api-info ul {
-                    list-style-type: none;
-                    padding-left: 10px;
-                }
-                .api-info li {
-                    margin-bottom: 8px;
-                    padding-left: 15px;
-                    position: relative;
-                }
-                .api-info li:before {
-                    content: '→';
-                    position: absolute;
-                    left: 0;
-                    color: #4CAF50;
-                }
-            </style>
-        </head>
-        <body>
-            <h1>沥青罐监控系统 - Vercel版本</h1>
-            <p>这是沥青罐监控系统的Vercel无服务器版本，使用模拟数据展示。</p>
-            
-            <div class="api-info">
-                <h3>可用API端点：</h3>
-                <ul>
-                    <li><a href="/api/tanks">/api/tanks</a> - 获取所有罐信息</li>
-                    <li><a href="/api/tanks/data">/api/tanks/data</a> - 获取所有罐的详细数据</li>
-                    <li><a href="/api/mqtt/status">/api/mqtt/status</a> - 获取MQTT连接状态</li>
-                    <li><a href="/api/history/1">/api/history/{tank_id}</a> - 获取特定罐的历史数据</li>
-                    <li><a href="/api/health">/api/health</a> - 健康检查</li>
-                </ul>
-            </div>
-        </body>
-        </html>
-        '''
+        # 生成模拟的罐数据
+        max_tanks = int(os.environ.get('MAX_TANKS', 11))
+        tanks = {}
+        for i in range(1, max_tanks + 1):
+            tanks[i] = {
+                'id': i,
+                'name': f'{i}#沥青罐',
+                'temperature': 150.0 + (i * 2),  # 给每个罐一个不同的温度
+                'level': 3.0 + (i * 0.3),  # 给每个罐一个不同的液位
+                'weight': 20.0 + (i * 2),  # 给每个罐一个不同的重量
+                'height': 8.0,
+                'high_limit': 6.4,
+                'alarm_shown': False,
+                'error': 0.0
+            }
+        
+        # 渲染完整的index.html模板，并传递必要的变量
+        return render_template('index.html', tanks=tanks)
     except Exception as e:
         logger.error(f"加载主页时出错: {str(e)}")
         return str(e), 500
