@@ -486,7 +486,7 @@ def initialize_mqtt_client():
 def index():
     """首页路由"""
     # 检查MQTT客户端实例是否存在并获取连接状态
-    return render_template('index.html', tanks=tank_data, mqtt_connected=is_connected)
+    return render_template('index.html', tanks=tank_data, mqtt_connected=is_connected, os=os)
 
 @app.route('/api/tanks')
 def get_tanks():
