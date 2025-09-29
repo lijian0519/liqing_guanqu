@@ -95,12 +95,13 @@ def initialize_tanks():
     """初始化罐数据结构"""
     tanks = {}
     for i in range(1, current_config.MAX_TANKS + 1):
+        # 为了测试，使用一些有意义的默认值，而不是全部为0
         tanks[i] = {
             'id': i,
             'name': f'{i}#沥青罐',
-            'temperature': 0.0,
-            'level': 0.0,
-            'weight': 0.0,
+            'temperature': 150.0 + (i * 2),  # 给每个罐一个不同的初始温度
+            'level': 3.0 + (i * 0.3),  # 给每个罐一个不同的初始液位
+            'weight': 20.0 + (i * 2),  # 给每个罐一个不同的初始重量
             'height': current_config.DEFAULT_TANK_HEIGHT,
             'high_limit': current_config.DEFAULT_TANK_HEIGHT * current_config.HIGH_LEVEL_THRESHOLD_PERCENTAGE,
             'alarm_shown': False,
