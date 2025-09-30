@@ -8,18 +8,8 @@
   ],
   "routes": [
     {
-      "src": "/static/css/(.*)",
-      "dest": "/static/css/$1",
-      "headers": {
-        "cache-control": "public, max-age=31536000, immutable"
-      }
-    },
-    {
-      "src": "/static/js/(.*)",
-      "dest": "/static/js/$1",
-      "headers": {
-        "cache-control": "public, max-age=31536000, immutable"
-      }
+      "src": "/",
+      "dest": "vercel_app.py"
     },
     {
       "src": "/(.*)",
